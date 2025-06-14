@@ -8,7 +8,6 @@ from spotipy import Spotify
 from spotipy.oauth2 import SpotifyOAuth
 from ytmusicapi import YTMusic, OAuthCredentials
 
-# --- Load credentials ---
 load_dotenv()
 
 sp = Spotify(auth_manager=SpotifyOAuth(
@@ -23,20 +22,20 @@ ytmusic = YTMusic("oauth.json", oauth_credentials=OAuthCredentials(
     client_secret=os.getenv("YT_CLIENT_SECRET")
 ))
 
-# --- Get Spotify playlists ---
+# get spotify playlists
 spotify_playlists = sp.current_user_playlists()['items']
 print("📋 Spotify Playlists:")
 for i, pl in enumerate(spotify_playlists):
     print(f"{i}: {pl['name']}")
 
-# --- Ask user which to sync ---
+# input on which playlists to sync
 indices = input("Enter playlist numbers to sync (comma-separated): ")
 selected_indices = {int(i.strip()) for i in indices.split(",") if i.strip().isdigit()}
 
-# --- Get existing YT playlists ---
+# get existing yt playlists
 yt_playlists = {pl['title']: pl['playlistId'] for pl in ytmusic.get_library_playlists()}
 
-# --- Sync selected playlists ---
+# sync playlists
 for i, pl in enumerate(spotify_playlists):
     if i not in selected_indices:
         continue
@@ -51,6 +50,19 @@ for i, pl in enumerate(spotify_playlists):
     else:
         yt_id = ytmusic.create_playlist(yt_name, f"Imported from Spotify: {sp_name}")
         print(f"🆕 Created YT playlist: {yt_name}")
+
+        # wait for playlist to be created
+        import time
+        for attempt in range(10):
+            try:
+                _ = ytmusic.get_playlist(yt_id)
+                break
+            except Exception:
+                print(f"⌛ Waiting for playlist to be available... (Attempt {attempt + 1})")
+                time.sleep(1)
+        else:
+            print("❌ Failed to access the newly created playlist.")
+            continue
 
     yt_existing = {
         f"{t['title'].lower()} - {', '.join(a['name'].lower() for a in t['artists'])}"
@@ -85,7 +97,7 @@ for i, pl in enumerate(spotify_playlists):
 
     if video_ids_to_add:
         ytmusic.add_playlist_items(yt_id, video_ids_to_add, duplicates=False)
-        print(f"🎯 Added {len(video_ids_to_add)} new tracks to {yt_name}")
+        print(f"Added {len(video_ids_to_add)} new tracks to {yt_name}")
     else:
-        print("📭 Nothing new to add.")
+        print("Nothing new to add.")
 
