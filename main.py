@@ -44,6 +44,8 @@ for i, pl in enumerate(spotify_playlists):
     yt_name = f"{sp_name} (from Spotify)"
     print(f"\n🎵 Syncing: {sp_name}")
 
+    
+
     if yt_name in yt_playlists:
         yt_id = yt_playlists[yt_name]
         print(f"🔁 Using existing YT playlist: {yt_name}")
@@ -64,10 +66,41 @@ for i, pl in enumerate(spotify_playlists):
             print("❌ Failed to access the newly created playlist.")
             continue
 
-    yt_existing = {
-        f"{t['title'].lower()} - {', '.join(a['name'].lower() for a in t['artists'])}"
-        for t in ytmusic.get_playlist(yt_id)['tracks']
-    }
+
+    video_ids_to_remove = []
+
+    # remove tracks in yt music playlist not in spotify playlist
+    yt_existing = ytmusic.get_playlist(yt_id, limit=None)['tracks']
+    tracks = sp.playlist_tracks(pl['id'])
+    spotify_existing = []
+
+    while tracks:
+        for item in tracks['items']:
+            track = item.get('track')
+            if not track:
+                continue
+            name = track['name']
+            artists = ', '.join(a['name'] for a in track['artists'])
+            spotify_existing.append(name)
+       
+        tracks = sp.next(tracks) if tracks['next'] else None
+
+    for track in yt_existing:
+        if track['title'] in spotify_existing:
+            continue
+        
+        video_ids_to_remove.append({
+            "videoId": track['videoId'],
+            "setVideoId": track['setVideoId']
+        })
+        print(f"🗑️  Removing: {name} by {artists}")
+
+    if video_ids_to_remove:
+        ytmusic.remove_playlist_items(yt_id, video_ids_to_remove)
+        print(f"Removed {len(video_ids_to_remove)} tracks from {yt_name}")
+    else:
+        print("Nothing to remove.")
+
 
     video_ids_to_add = []
 
@@ -79,11 +112,15 @@ for i, pl in enumerate(spotify_playlists):
                 continue
             name = track['name']
             artists = ', '.join(a['name'] for a in track['artists'])
-            key = f"{name.lower()} - {artists.lower()}"
 
-            if key in yt_existing:
-                print(f"⏭️  Already in YT: {name} by {artists}")
-                continue
+            existing = False
+            for track in yt_existing:
+                if track['title'] == name:
+                    existing = True
+                    continue
+
+            if existing:
+                continue    
 
             query = f"{name} by {artists}"
             results = ytmusic.search(query, filter="songs")
@@ -100,4 +137,6 @@ for i, pl in enumerate(spotify_playlists):
         print(f"Added {len(video_ids_to_add)} new tracks to {yt_name}")
     else:
         print("Nothing new to add.")
+
+    
 
