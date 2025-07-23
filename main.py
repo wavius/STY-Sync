@@ -93,7 +93,10 @@ for i, pl in enumerate(spotify_playlists):
             "videoId": track['videoId'],
             "setVideoId": track['setVideoId']
         })
+        name = track['title']
+        artists = ', '.join(a['name'] for a in track['artists'])
         print(f"🗑️  Removing: {name} by {artists}")
+
 
     if video_ids_to_remove:
         ytmusic.remove_playlist_items(yt_id, video_ids_to_remove)
@@ -131,7 +134,7 @@ for i, pl in enumerate(spotify_playlists):
                 print(f"❌ Not found: {name} by {artists}")
 
         tracks = sp.next(tracks) if tracks['next'] else None
-
+    video_ids_to_add = [vid for vid in video_ids_to_add if isinstance(vid, str) and len(vid) > 0]
     if video_ids_to_add:
         ytmusic.add_playlist_items(yt_id, video_ids_to_add, duplicates=False)
         print(f"Added {len(video_ids_to_add)} new tracks to {yt_name}")
