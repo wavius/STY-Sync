@@ -1,4 +1,4 @@
-# StoY-Sync
+# Spotify to YT Music Playlist Sync
 Simple python script that syncs Spotify and YT Music playlists. 
 
 ### Usage
